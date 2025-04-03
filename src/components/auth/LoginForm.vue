@@ -63,6 +63,7 @@ const handleSubmit = async () => {
     </template>
 
     <template #footer-links>
+      Don't have an account?
       <v-btn variant="text" color="primary" to="/register">Create an account</v-btn>
     </template>
   </AppLayout>
