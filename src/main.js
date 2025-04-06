@@ -12,7 +12,7 @@ import '@mdi/font/css/materialdesignicons.css'
 
 // Create router
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/' },
   { path: '/login', component: () => import('./views/auth/LoginView.vue') },
   { path: '/register', component: () => import('./views/auth/RegisterView.vue') },
 ]
