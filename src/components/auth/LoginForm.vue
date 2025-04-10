@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../layout/AppLayout.vue'
+import { requiredValidator, emailValidator } from '../src/utils'
+
 const router = useRouter()
 const email = ref('')
 const password = ref('')
@@ -10,10 +12,10 @@ const showPassword = ref(false)
 const loading = ref(false)
 
 const rules = {
-  required: (value) => !!value || 'Required.',
-  email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Invalid email.',
+  required: requiredValidator,
+  email: emailValidator,
 }
-
+  
 const handleSubmit = async () => {
   loading.value = true
   try {
@@ -43,8 +45,7 @@ const handleSubmit = async () => {
         required
         prepend-inner-icon="mdi-email-outline"
         :rules="[rules.required, rules.email]"
-      >
-      </v-text-field>
+      />
 
       <v-text-field
         v-model="password"
@@ -55,11 +56,10 @@ const handleSubmit = async () => {
         prepend-inner-icon="mdi-lock-outline"
         :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
         @click:append-inner="showPassword = !showPassword"
-      >
-      </v-text-field>
+        :rules="[rules.required]"
+      />
 
-      <v-checkbox v-model="rememberMe" label="Remember me" color="primary" hide-details>
-      </v-checkbox>
+      <v-checkbox v-model="rememberMe" label="Remember me" color="primary" hide-details />
     </template>
 
     <template #footer-links>

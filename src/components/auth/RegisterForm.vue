@@ -2,6 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../layout/AppLayout.vue'
+import {
+  requiredValidator,
+  emailValidator,
+  passwordValidator,
+  confirmedValidator,
+} from '../validators.js'
 
 const router = useRouter()
 const name = ref('')
@@ -13,17 +19,21 @@ const showConfirmPassword = ref(false)
 const loading = ref(false)
 
 const rules = {
-  required: (value) => !!value || 'Required.',
-  email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Invalid email.',
-  password: (value) => value.length >= 8 || 'Password must be at least 8 characters.',
+  required: requiredValidator,
+  email: emailValidator,
+  password: passwordValidator,
 }
 
-const passwordMatchRule = (value) => value === password.value || 'Passwords do not match.'
+const passwordMatchRule = (value) => confirmedValidator(value, password.value)
 
 const handleSubmit = async () => {
   loading.value = true
   try {
-    console.log('Registering:', { name: name.value, email: email.value, password: password.value })
+    console.log('Registering:', {
+      name: name.value,
+      email: email.value,
+      password: password.value,
+    })
     await new Promise((resolve) => setTimeout(resolve, 1000))
     router.push('/dashboard')
   } finally {
@@ -31,6 +41,7 @@ const handleSubmit = async () => {
   }
 }
 </script>
+
 <template>
   <AppLayout
     title="Create an account"
@@ -48,8 +59,7 @@ const handleSubmit = async () => {
         required
         prepend-inner-icon="mdi-account-outline"
         :rules="[rules.required]"
-      >
-      </v-text-field>
+      />
 
       <v-text-field
         v-model="email"
@@ -60,8 +70,7 @@ const handleSubmit = async () => {
         required
         prepend-inner-icon="mdi-email-outline"
         :rules="[rules.required, rules.email]"
-      >
-      </v-text-field>
+      />
 
       <v-text-field
         v-model="password"
@@ -73,8 +82,7 @@ const handleSubmit = async () => {
         :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
         @click:append-inner="showPassword = !showPassword"
         :rules="[rules.required, rules.password]"
-      >
-      </v-text-field>
+      />
 
       <v-text-field
         v-model="confirmPassword"
@@ -86,8 +94,7 @@ const handleSubmit = async () => {
         :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
         @click:append-inner="showConfirmPassword = !showConfirmPassword"
         :rules="[rules.required, passwordMatchRule]"
-      >
-      </v-text-field>
+      />
     </template>
 
     <template #footer-links>
