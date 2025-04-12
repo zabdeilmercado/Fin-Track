@@ -1,6 +1,4 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import AppLayout from '../layout/AppLayout.vue'
 import {
   requiredValidator,
@@ -8,16 +6,14 @@ import {
   passwordValidator,
   confirmedValidator,
 } from '../../utils/validators'
+import AlertNotification from '@/components/common/AlertNotification.vue'
+import { useRegister } from '@/composables/auth/register'
+import { ref } from 'vue'
 
-const router = useRouter()
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
+const { formData, formAction, refVForm, onFormSubmit } = useRegister()
+
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
-const loading = ref(false)
-const isValid = ref(false)
 
 const rules = {
   required: requiredValidator,
@@ -25,27 +21,7 @@ const rules = {
   password: passwordValidator,
 }
 
-const passwordMatchRule = (value) => confirmedValidator(value, password.value)
-
-const handleSubmit = async () => {
-  loading.value = true
-  try {
-    // Check if the form is valid before submitting
-    if (isValid.value) {
-      console.log('Registering:', {
-        name: name.value,
-        email: email.value,
-        password: password.value,
-      })
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      router.push('/dashboard')
-    } else {
-      console.log('Form is invalid.')
-    }
-  } finally {
-    loading.value = false
-  }
-}
+const passwordMatchRule = (value) => confirmedValidator(value, formData.value.password)
 </script>
 
 <template>
@@ -53,13 +29,18 @@ const handleSubmit = async () => {
     title="Create an account"
     subtitle="Enter your information to get started"
     buttonText="Create account"
-    :loading="loading"
-    @submit="handleSubmit"
+    :loading="formAction.formProcess"
+    @submit.prevent="onFormSubmit"
   >
     <template #form-fields>
-      <v-form v-model="isValid">
+      <v-form ref="refVForm">
+        <AlertNotification
+          :formSuccessMessage="formAction.formSuccessMessage"
+          :formErrorMessage="formAction.formErrorMessage"
+        />
+
         <v-text-field
-          v-model="name"
+          v-model="formData.name"
           label="Full Name"
           placeholder="John Doe"
           variant="outlined"
@@ -69,7 +50,7 @@ const handleSubmit = async () => {
         />
 
         <v-text-field
-          v-model="email"
+          v-model="formData.email"
           label="Email"
           type="email"
           placeholder="name@example.com"
@@ -80,7 +61,7 @@ const handleSubmit = async () => {
         />
 
         <v-text-field
-          v-model="password"
+          v-model="formData.password"
           label="Password"
           :type="showPassword ? 'text' : 'password'"
           variant="outlined"
@@ -92,7 +73,7 @@ const handleSubmit = async () => {
         />
 
         <v-text-field
-          v-model="confirmPassword"
+          v-model="formData.password_confirmation"
           label="Confirm Password"
           :type="showConfirmPassword ? 'text' : 'password'"
           variant="outlined"
@@ -102,6 +83,18 @@ const handleSubmit = async () => {
           @click:append-inner="showConfirmPassword = !showConfirmPassword"
           :rules="[rules.required, passwordMatchRule]"
         />
+
+        <v-btn
+          class="mt-2"
+          type="submit"
+          block
+          color="deep-orange-lighten-1"
+          prepend-icon="mdi-account-plus"
+          :disabled="formAction.formProcess"
+          :loading="formAction.formProcess"
+        >
+          Register
+        </v-btn>
       </v-form>
     </template>
 
