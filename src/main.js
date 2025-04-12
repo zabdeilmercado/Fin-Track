@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import { createPinia } from 'pinia';
 import App from './App.vue'
 
 // Vuetify
@@ -22,7 +23,9 @@ const router = createRouter({
   routes,
 })
 
-// Create Vuetify instance with light and dark theme
+const pinia = createPinia();
+
+// Vuetify instance
 const vuetify = createVuetify({
   components,
   directives,
@@ -39,7 +42,7 @@ const vuetify = createVuetify({
       light: {
         dark: false,
         colors: {
-          primary: '#7C3AED', // Purple
+          primary: '#7C3AED',
           secondary: '#8B5CF6',
           background: '#F9FAFB',
           surface: '#FFFFFF',
@@ -51,7 +54,7 @@ const vuetify = createVuetify({
       dark: {
         dark: true,
         colors: {
-          primary: '#8B5CF6', // Lighter purple for dark mode
+          primary: '#8B5CF6',
           secondary: '#A78BFA',
           background: '#111827',
           surface: '#1F2937',
@@ -64,5 +67,9 @@ const vuetify = createVuetify({
   },
 })
 
-// Create and mount the app
-createApp(App).use(router).use(vuetify).mount('#app')
+
+const app = createApp(App);
+app.use(pinia);
+app.use(router);
+app.use(vuetify);
+app.mount('#app');
