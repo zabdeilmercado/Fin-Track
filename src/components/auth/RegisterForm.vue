@@ -83,18 +83,6 @@ const passwordMatchRule = (value) => confirmedValidator(value, formData.value.pa
           @click:append-inner="showConfirmPassword = !showConfirmPassword"
           :rules="[rules.required, passwordMatchRule]"
         />
-
-        <v-btn
-          class="mt-2"
-          type="submit"
-          block
-          color="deep-orange-lighten-1"
-          prepend-icon="mdi-account-plus"
-          :disabled="formAction.formProcess"
-          :loading="formAction.formProcess"
-        >
-          Register
-        </v-btn>
       </v-form>
     </template>
 
