@@ -1,11 +1,11 @@
 <script setup>
-import AppLayout from '../layout/AppLayout.vue'
+import AppLayout from '@/components/layout/AppLayout.vue'
 import {
   requiredValidator,
   emailValidator,
   passwordValidator,
   confirmedValidator,
-} from '../../utils/validators'
+} from '@/utils/validators'
 import AlertNotification from '@/components/common/AlertNotification.vue'
 import { useRegister } from '@/composables/auth/register'
 import { ref } from 'vue'
