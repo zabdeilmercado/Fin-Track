@@ -1,9 +1,7 @@
 import { createApp } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
-import { createPinia } from 'pinia';
-import App from './App.vue'
+import { createPinia } from 'pinia'
 
-// Vuetify
+// Vuetify setup
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
@@ -11,21 +9,9 @@ import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import '@mdi/font/css/materialdesignicons.css'
 
-// Create router
-const routes = [
-  { path: '/', redirect: '/login' },
-  { path: '/login', component: () => import('./views/auth/LoginView.vue') },
-  { path: '/register', component: () => import('./views/auth/RegisterView.vue') },
-]
+import App from './App.vue'
+import router from './router'
 
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-})
-
-const pinia = createPinia();
-
-// Vuetify instance
 const vuetify = createVuetify({
   components,
   directives,
@@ -67,9 +53,9 @@ const vuetify = createVuetify({
   },
 })
 
+const app = createApp(App)
 
-const app = createApp(App);
-app.use(pinia);
-app.use(router);
-app.use(vuetify);
-app.mount('#app');
+app.use(createPinia())
+app.use(router)
+app.use(vuetify)
+app.mount('#app')

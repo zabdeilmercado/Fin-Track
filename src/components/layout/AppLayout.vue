@@ -1,6 +1,10 @@
 <script setup>
-import { computed } from 'vue'
-import { useTheme } from 'vuetify'
+import { useThemeService } from '@/services/themeService'
+import { computed, onMounted } from 'vue'
+
+const themeService = useThemeService()
+const isDarkTheme = computed(() => themeService.isDarkTheme.value)
+const toggleTheme = themeService.toggleTheme
 
 defineProps({
   title: String,
@@ -10,14 +14,6 @@ defineProps({
 })
 
 defineEmits(['submit'])
-
-const theme = useTheme()
-const isDarkTheme = computed(() => theme.global.current.value.dark)
-
-const toggleTheme = () => {
-  theme.global.name.value = isDarkTheme.value ? 'light' : 'dark'
-  localStorage.setItem('theme', theme.global.name.value)
-}
 </script>
 
 <template>
