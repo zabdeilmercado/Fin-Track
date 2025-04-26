@@ -1,8 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import AppLayout from '../layout/AppLayout.vue'
-import { requiredValidator, emailValidator } from '../../utils/validators'
+import AppLayout from '@/components/layout/AppLayout.vue'
+import { requiredValidator, emailValidator } from '@/utils/validators'
 
 const router = useRouter()
 const email = ref('')
@@ -53,7 +53,7 @@ const handleSubmit = async () => {
           prepend-inner-icon="mdi-email-outline"
           :rules="[rules.required, rules.email]"
         />
-        
+
         <v-text-field
           v-model="password"
           label="Password"
@@ -65,7 +65,7 @@ const handleSubmit = async () => {
           @click:append-inner="showPassword = !showPassword"
           :rules="[rules.required]"
         />
-        
+
         <v-checkbox v-model="rememberMe" label="Remember me" color="primary" hide-details />
       </v-form>
     </template>

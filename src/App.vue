@@ -1,11 +1,3 @@
-<template>
-  <v-app>
-    <v-main>
-      <router-view />
-    </v-main>
-  </v-app>
-</template>
-
 <script setup>
 import { onMounted } from 'vue';
 import { useTheme } from 'vuetify';
@@ -24,3 +16,12 @@ onMounted(() => {
   }
 });
 </script>
+
+<template>
+  <v-app>
+    <v-main>
+      <router-view :key="$route.fullPath"/>
+    </v-main>
+  </v-app>
+</template>
+
