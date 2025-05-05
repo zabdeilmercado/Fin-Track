@@ -13,6 +13,12 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import AccountForm from '@/components/AccountForm.vue'
+// Import chart components
+import { Line, Pie } from 'vue-chartjs'
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
+
+// Register ChartJS components
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement)
 
 const financeStore = useFinanceStore()
 
@@ -32,8 +38,8 @@ const transactionData = ref({
   type: 'expense',
   date: new Date().toISOString().substr(0, 10),
   category: '',
-  account: '',
   notes: '',
+  account: '', // Add account field to transaction data
 })
 
 const accountData = ref({
@@ -56,6 +62,56 @@ const accountOptions = computed(() => {
   }))
 })
 
+// Chart data
+const incomeVsExpensesData = computed(() => {
+  // Get last 6 months of data
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+  
+  // This would normally come from your store with actual monthly data
+  const incomeData = [1200, 1500, 1300, 1700, 1600, 1800]
+  const expenseData = [900, 1100, 950, 1300, 1200, 1400]
+  
+  return {
+    labels: months,
+    datasets: [
+      {
+        label: 'Income',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        data: incomeData,
+        tension: 0.4
+      },
+      {
+        label: 'Expenses',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        data: expenseData,
+        tension: 0.4
+      }
+    ]
+  }
+})
+
+const expenseBreakdownData = computed(() => {
+  // This would normally be calculated from your actual transaction data
+  return {
+    labels: ['Housing', 'Food', 'Transportation', 'Entertainment', 'Utilities', 'Other'],
+    datasets: [
+      {
+        backgroundColor: [
+          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#C9CBCF'
+        ],
+        data: [30, 20, 15, 10, 15, 10]
+      }
+    ]
+  }
+})
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false
+}
+
 // Transaction methods
 const openNewTransactionDialog = () => {
   isEditMode.value = false
@@ -66,8 +122,8 @@ const openNewTransactionDialog = () => {
     type: 'expense',
     date: new Date().toISOString().substr(0, 10),
     category: '',
-    account: financeStore.accounts.length > 0 ? financeStore.accounts[0].id : '',
     notes: '',
+    account: financeStore.accounts.length > 0 ? financeStore.accounts[0].id : '', // Default to first account if available
   }
   transactionDialog.value = true
 }
@@ -84,6 +140,11 @@ const closeTransactionDialog = () => {
 }
 
 const saveTransaction = (transaction) => {
+  // Ensure the transaction has an account associated with it
+  if (!transaction.account && financeStore.accounts.length > 0) {
+    transaction.account = financeStore.accounts[0].id
+  }
+  
   if (isEditMode.value && selectedTransaction.value) {
     financeStore.updateTransaction(selectedTransaction.value.id, transaction)
   } else {
@@ -134,6 +195,10 @@ const saveAccount = (account) => {
   if (isEditMode.value && selectedAccount.value) {
     financeStore.updateAccount(selectedAccount.value.id, account)
   } else {
+    // Generate a unique ID for the new account if not provided
+    if (!account.id) {
+      account.id = 'acc_' + Date.now()
+    }
     financeStore.addAccount(account)
   }
   closeAccountDialog()
@@ -287,19 +352,12 @@ onMounted(() => {
           <v-card-text style="height: 300px">
             <v-sheet class="d-flex justify-center align-center" height="100%">
               <template v-if="hasTransactionData">
-                <!-- Placeholder for chart - would be replaced with actual chart component -->
-                <v-responsive width="100%" height="100%" max-height="250">
-                  <div
-                    class="pa-4 d-flex flex-column align-center justify-center"
-                    style="height: 100%"
-                  >
-                    <v-icon size="64" color="primary" class="mb-4">mdi-chart-line</v-icon>
-                    <div class="text-h6 text-center">Monthly Comparison</div>
-                    <div class="text-body-2 text-center text-medium-emphasis mt-2">
-                      Income vs Expenses over time
-                    </div>
-                  </div>
-                </v-responsive>
+                <!-- Actual chart implementation -->
+                <Line 
+                  :data="incomeVsExpensesData" 
+                  :options="chartOptions"
+                  style="width: 100%; height: 100%;"
+                />
               </template>
               <template v-else>
                 <EmptyState
@@ -321,19 +379,12 @@ onMounted(() => {
           <v-card-text style="height: 300px">
             <v-sheet class="d-flex justify-center align-center" height="100%">
               <template v-if="hasTransactionData">
-                <!-- Placeholder for pie chart - would be replaced with actual chart component -->
-                <v-responsive width="100%" height="100%" max-height="250">
-                  <div
-                    class="pa-4 d-flex flex-column align-center justify-center"
-                    style="height: 100%"
-                  >
-                    <v-icon size="64" color="primary" class="mb-4">mdi-chart-pie</v-icon>
-                    <div class="text-h6 text-center">Category Distribution</div>
-                    <div class="text-body-2 text-center text-medium-emphasis mt-2">
-                      Expense breakdown by category
-                    </div>
-                  </div>
-                </v-responsive>
+                <!-- Actual pie chart implementation -->
+                <Pie 
+                  :data="expenseBreakdownData" 
+                  :options="chartOptions"
+                  style="width: 100%; height: 100%;"
+                />
               </template>
               <template v-else>
                 <EmptyState
@@ -442,6 +493,7 @@ onMounted(() => {
               v-for="(transaction, index) in financeStore.recentTransactions"
               :key="index"
               :ripple="false"
+              @click="openEditTransactionDialog(transaction)"
             >
               <template v-slot:prepend>
                 <v-avatar :color="getCategoryColor(transaction.category)" size="40" variant="tonal">
@@ -451,7 +503,8 @@ onMounted(() => {
 
               <v-list-item-title>{{ transaction.description }}</v-list-item-title>
               <v-list-item-subtitle>
-                {{ formatDate(transaction.date) }} • {{ transaction.account }}
+                {{ formatDate(transaction.date) }} • 
+                {{ financeStore.getAccountNameById(transaction.account) }}
               </v-list-item-subtitle>
 
               <template v-slot:append>
