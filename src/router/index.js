@@ -4,6 +4,7 @@ import RegisterView from '@/views/auth/RegisterView.vue'
 import DashboardView from '@/views/system/DashboardView.vue'
 import TransactionView from '@/views/system/TransactionsView.vue'
 import CategoriesView from '@/views/system/CategoriesView.vue'
+import SettingsPage from '@/views/system/SettingsPage.vue'
 
 const routes = [
   {
@@ -35,7 +36,14 @@ const routes = [
     name: 'categories',
     component: CategoriesView,
   },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: SettingsPage,
+  },
+  
 ]
+
 
 const router = createRouter({
   history: createWebHistory(),

@@ -91,18 +91,24 @@ const menuItems = [
         </v-btn>
 
         <v-menu location="bottom end">
-          <template v-slot:activator="{ props }">
-            <v-avatar size="32" class="ml-2 cursor-pointer" v-bind="props">
-              <v-img src="https://randomuser.me/api/portraits/men/85.jpg" alt="User"></v-img>
-            </v-avatar>
-          </template>
-          <v-list>
-            <v-list-item title="Profile"></v-list-item>
-            <v-list-item title="Settings"></v-list-item>
-            <v-divider></v-divider>
-            <v-list-item title="Logout" to:></v-list-item>
-          </v-list>
-        </v-menu>
+  <template v-slot:activator="{ props }">
+    <v-avatar size="32" class="ml-2 cursor-pointer" v-bind="props">
+      <v-img src="https://randomuser.me/api/portraits/men/85.jpg" alt="User"></v-img>
+    </v-avatar>
+  </template>
+  <v-list>
+    <v-list-item @click="$router.push('/settings')">
+      <v-list-item-title>Settings</v-list-item-title>
+    </v-list-item>
+
+    <v-divider></v-divider>
+
+    <v-list-item @click="$router.push('/login')">
+      <v-list-item-title>Logout</v-list-item-title>
+    </v-list-item>
+  </v-list>
+</v-menu>
+
       </v-app-bar>
 
       <!-- Page Content -->
