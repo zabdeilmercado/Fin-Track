@@ -4,11 +4,17 @@ import RegisterView from '@/views/auth/RegisterView.vue'
 import DashboardView from '@/views/system/DashboardView.vue'
 import TransactionView from '@/views/system/TransactionsView.vue'
 import CategoriesView from '@/views/system/CategoriesView.vue'
+import { supabase } from '@/utils/supabase'
 
 const routes = [
   {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/views/auth/ResetPasswordView.vue'),
+  },
+  {
     path: '/',
-    redirect: '/login',
+    redirect: '/dashboard',
   },
   {
     path: '/login',
@@ -35,11 +41,28 @@ const routes = [
     name: 'categories',
     component: CategoriesView,
   },
+  { path: '/budgets', name: 'budgets', component: () => import('@/views/system/BudgetsView.vue') },
+  { path: '/savings', name: 'savings', component: () => import('@/views/system/SavingsView.vue') },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/system/SettingsView.vue'),
+  },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach(async (to) => {
+  if (to.name === 'reset-password') return true
+  const isPublic = ['login', 'register'].includes(to.name)
+  if (!supabase) return isPublic ? true : { name: 'login' }
+  const { data, error } = await supabase.auth.getSession()
+  if ((!data.session || error) && !isPublic) return { name: 'login' }
+  if (data.session && isPublic) return { name: 'dashboard' }
 })
 
 export default router

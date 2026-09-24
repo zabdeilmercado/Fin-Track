@@ -60,12 +60,12 @@ const closeDeleteCategoryDialog = () => {
   deleteCategoryDialog.value = false
 }
 
-const deleteCategory = () => {
+const deleteCategory = async () => {
   financeStore.deleteCategory(selectedCategory.value.id)
   closeDeleteCategoryDialog()
 }
 
-const saveCategory = (category) => {
+const saveCategory = async (category) => {
   if (isEditMode.value && selectedCategory.value) {
     financeStore.updateCategory(selectedCategory.value.id, category)
   } else {
@@ -214,7 +214,10 @@ onMounted(() => {
     <v-dialog v-model="deleteCategoryDialog" max-width="500px">
       <v-card>
         <v-card-title>Delete Category</v-card-title>
-        <v-card-text>
+        <v-card-text
+          ><v-alert v-if="financeStore.error" type="error" class="mb-3">{{
+            financeStore.error
+          }}</v-alert>
           Are you sure you want to delete this category? Transactions with this category will be
           marked as uncategorized.
         </v-card-text>

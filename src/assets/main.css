@@ -1,35 +1,92 @@
 @import './base.css';
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+:root {
+  --ft-radius-sm: 10px;
+  --ft-radius-md: 16px;
+  --ft-radius-lg: 24px;
+  --ft-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.04);
+  --ft-shadow-md: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+html { overflow-y: auto; }
+body { min-width: 320px; }
+#app { min-height: 100vh; }
+
+.v-application {
+  font-family: var(--font-sans) !important;
+  letter-spacing: -0.006em;
 }
 
+.v-card {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: var(--ft-radius-md) !important;
+  box-shadow: var(--ft-shadow-sm) !important;
+}
+
+.v-card-title { letter-spacing: -0.025em; font-weight: 650; }
+.v-btn { letter-spacing: 0; text-transform: none; font-weight: 650; border-radius: 10px; }
+.v-btn--size-default { min-height: 40px; }
+.v-field { border-radius: 12px !important; }
+.v-dialog > .v-overlay__content > .v-card { border-radius: 20px !important; }
+.v-dialog .v-card-title { padding: 22px 24px 8px; font-size: 1.25rem; }
+.v-list-item { border-radius: 10px; }
+.v-chip { font-weight: 600; letter-spacing: 0; }
+.v-data-table { border-radius: inherit; }
+.v-table__wrapper { scrollbar-width: thin; }
+
+.page-heading {
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  line-height: 1.2;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+}
+
+.page-description { color: rgba(var(--v-theme-on-surface), 0.66); max-width: 62ch; }
+
+.section-heading {
+  font-size: 1.1rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.metric-value {
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  line-height: 1.1;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.eyebrow {
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-size: 0.72rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.interactive-card { transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
 @media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
+  .interactive-card:hover { transform: translateY(-2px); box-shadow: var(--ft-shadow-md) !important; }
+}
+
+:focus-visible { outline: 3px solid rgba(var(--v-theme-primary), 0.42); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+@media (max-width: 599px) {
+  .v-card { border-radius: 14px !important; }
+  .v-dialog > .v-overlay__content { margin: 12px; width: calc(100% - 24px); }
+  .v-dialog > .v-overlay__content > .v-card { border-radius: 16px !important; }
+  .metric-value { font-size: 1.45rem; }
 }

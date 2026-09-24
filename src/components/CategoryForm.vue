@@ -1,6 +1,6 @@
-
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { useFinanceStore } from '@/stores/finance'
+import { ref, reactive, watch } from 'vue'
 import { CATEGORY_ICONS, CATEGORY_COLORS } from '@/utils/constants'
 
 const props = defineProps({
@@ -20,6 +20,7 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel'])
 
+const financeStore = useFinanceStore()
 const form = ref(null)
 const valid = ref(false)
 const availableIcons = CATEGORY_ICONS
@@ -32,15 +33,22 @@ const submitForm = () => {
   emit('submit', { ...formData })
 }
 
-onMounted(() => {
-  // Initialize form with provided category data
-  Object.assign(formData, props.category)
-})
+watch(
+  () => props.category,
+  () => {
+    // Initialize form with provided category data
+    Object.assign(formData, props.category)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <v-form ref="form" v-model="valid" @submit.prevent="submitForm">
     <v-container>
+      <v-alert v-if="financeStore.error" type="error" class="mb-4">{{
+        financeStore.error
+      }}</v-alert>
       <v-row>
         <v-col cols="12">
           <v-text-field
@@ -102,7 +110,15 @@ onMounted(() => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="error" variant="text" @click="$emit('cancel')">Cancel</v-btn>
-      <v-btn color="primary" variant="text" type="submit" :disabled="!valid"> Save </v-btn>
+      <v-btn
+        color="primary"
+        variant="text"
+        type="submit"
+        :disabled="!valid || financeStore.isLoading || financeStore.isSaving"
+        :loading="financeStore.isSaving"
+      >
+        Save
+      </v-btn>
     </v-card-actions>
   </v-form>
 </template>

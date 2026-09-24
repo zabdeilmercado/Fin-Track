@@ -1,10 +1,10 @@
 /**
  * Format a number as currency
  * @param {number} value - The value to format
- * @param {string} currency - The currency code (default: USD)
+ * @param {string} currency - The currency code (default: PHP)
  * @returns {string} Formatted currency string
  */
-export const formatCurrency = (value, currency = 'USD') => {
+export const formatCurrency = (value, currency = 'PHP') => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
@@ -18,7 +18,7 @@ export const formatCurrency = (value, currency = 'USD') => {
  * @returns {string} Formatted date string
  */
 export const formatDate = (dateString) => {
-  const date = new Date(dateString)
+  const date = new Date(`${dateString}T12:00:00`)
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'short',

@@ -9,8 +9,10 @@ import {
 import AlertNotification from '@/components/common/AlertNotification.vue'
 import { useRegister } from '@/composables/auth/register'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const { formData, formAction, refVForm, onFormSubmit } = useRegister()
+const router = useRouter()
 
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
@@ -22,6 +24,13 @@ const rules = {
 }
 
 const passwordMatchRule = (value) => confirmedValidator(value, formData.value.password)
+
+const handleFormSubmit = async () => {
+  const success = await onFormSubmit()
+  if (success) {
+    router.push('/dashboard') // Redirect to the dashboard on success
+  }
+}
 </script>
 
 <template>
@@ -30,10 +39,10 @@ const passwordMatchRule = (value) => confirmedValidator(value, formData.value.pa
     subtitle="Enter your information to get started"
     buttonText="Create account"
     :loading="formAction.formProcess"
-    @submit.prevent="onFormSubmit"
+    @submit="handleFormSubmit"
   >
     <template #form-fields>
-      <v-form ref="refVForm">
+      <v-form ref="refVForm" @submit.prevent="handleFormSubmit">
         <AlertNotification
           :formSuccessMessage="formAction.formSuccessMessage"
           :formErrorMessage="formAction.formErrorMessage"

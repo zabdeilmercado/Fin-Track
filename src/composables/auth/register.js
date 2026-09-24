@@ -9,43 +9,53 @@ export function useRegister() {
     name: '',
     email: '',
     password: '',
-    password_confirmation: ''
+    password_confirmation: '',
   }
 
   const formData = ref({
-    ...formDataDefault
+    ...formDataDefault,
   })
 
   const formAction = ref({
-    ...formActionDefault
+    ...formActionDefault,
   })
 
   const refVForm = ref()
 
   const onSubmit = async () => {
+    if (formAction.value.formProcess) return
     formAction.value = { ...formActionDefault, formProcess: true }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.value.email,
-      password: formData.value.password,
-      options: {
-        data: {
-          name: formData.value.name,
-          is_admin: false
-        }
+    try {
+      if (!supabase)
+        throw new Error('Supabase is not configured. Set the deployment environment variables.')
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.value.email,
+        password: formData.value.password,
+        options: {
+          data: {
+            name: formData.value.name,
+            is_admin: false,
+          },
+        },
+      })
+
+      if (error) {
+        formAction.value.formErrorMessage = error.message
+        formAction.value.formStatus = error.status
+      } else if (data) {
+        formAction.value.formSuccessMessage = data.session
+          ? 'Account created.'
+          : 'Check your email to confirm your account, then sign in.'
+        if (data.session) await router.replace('/dashboard')
+        refVForm.value?.reset()
       }
-    })
-
-    if (error) {
-      formAction.value.formErrorMessage = error.message
-      formAction.value.formStatus = error.status
-    } else if (data) {
-      formAction.value.formSuccessMessage = 'Successfully Registered Account.'
-      router.replace('/dashboard')
+    } catch (err) {
+      console.error('[Unhandled Error in onSubmit]:', err)
+      formAction.value.formErrorMessage = err.message || 'Unexpected error occurred.'
+    } finally {
+      formAction.value.formProcess = false
     }
-
-    refVForm.value?.reset()
-    formAction.value.formProcess = false
   }
 
   const onFormSubmit = () => {

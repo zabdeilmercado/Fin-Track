@@ -2,6 +2,7 @@
 export const TRANSACTION_TYPES = [
   { title: 'Expense', value: 'expense' },
   { title: 'Income', value: 'income' },
+  { title: 'Transfer', value: 'transfer' },
 ]
 
 // Category options
@@ -17,7 +18,10 @@ export const CATEGORY_OPTIONS = [
 
 // Account type options
 export const ACCOUNT_TYPE_OPTIONS = [
+  { title: 'Checking', value: 'checking' },
   { title: 'Savings', value: 'savings' },
+  { title: 'Cash', value: 'cash' },
+  { title: 'Credit card', value: 'credit' },
 ]
 
 // Available icons for categories

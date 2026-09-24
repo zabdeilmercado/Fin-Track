@@ -1,8 +1,9 @@
 <script setup>
+import { today } from '@/utils/financeMath'
 import { ref, computed, onMounted } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
-import { formatCurrency, formatDate, getCategoryColor, getCategoryIcon } from '@/utils/formatters'
-import { TRANSACTION_TYPES, CATEGORY_OPTIONS, TRANSACTION_HEADERS } from '@/utils/constants'
+import { formatCurrency, formatDate, getCategoryColor } from '@/utils/formatters'
+import { TRANSACTION_TYPES, TRANSACTION_HEADERS } from '@/utils/constants'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
@@ -19,12 +20,6 @@ const filters = ref({
   endDate: null,
 })
 
-const dateMenu = ref({
-  start: false,
-  end: false,
-  transaction: false,
-})
-
 // Dialog state
 const transactionDialog = ref(false)
 const deleteDialog = ref(false)
@@ -35,21 +30,23 @@ const transactionData = ref({
   description: '',
   amount: 0,
   type: 'expense',
-  date: new Date().toISOString().substr(0, 10),
+  date: today(),
   category: '',
   account: '',
   notes: '',
 })
 
 // Loading state
-const loading = ref(false)
+const loading = computed(() => financeStore.isLoading)
 
 // Table headers
 const headers = TRANSACTION_HEADERS
 
 // Options for dropdowns
 const typeOptions = TRANSACTION_TYPES
-const categoryOptions = CATEGORY_OPTIONS
+const categoryOptions = computed(() =>
+  financeStore.categories.map((c) => ({ title: c.name, value: c.id })),
+)
 
 // Computed properties
 const accountOptions = computed(() => {
@@ -71,9 +68,12 @@ const filteredTransactions = computed(() => {
     const searchMatch =
       searchValue === '' ||
       transaction.description.toLowerCase().includes(searchValue) ||
-      transaction.notes.toLowerCase().includes(searchValue)
+      (transaction.notes || '').toLowerCase().includes(searchValue)
 
-    const accountMatch = !accountFilter || transaction.account === accountFilter
+    const accountMatch =
+      !accountFilter ||
+      transaction.account === accountFilter ||
+      transaction.toAccount === accountFilter
     const categoryMatch = !categoryFilter || transaction.category === categoryFilter
     const typeMatch = !typeFilter || transaction.type === typeFilter
 
@@ -95,11 +95,12 @@ const openNewTransactionDialog = () => {
     description: '',
     amount: 0,
     type: 'expense',
-    date: new Date().toISOString().substr(0, 10),
+    date: today(),
     category: '',
     account: financeStore.accounts.length > 0 ? financeStore.accounts[0].id : '',
     notes: '',
   }
+  financeStore.error = ''
   transactionDialog.value = true
 }
 
@@ -107,6 +108,7 @@ const openEditTransactionDialog = (transaction) => {
   isEditMode.value = true
   selectedTransaction.value = transaction
   transactionData.value = { ...transaction }
+  financeStore.error = ''
   transactionDialog.value = true
 }
 
@@ -123,12 +125,12 @@ const closeDeleteDialog = () => {
   deleteDialog.value = false
 }
 
-const deleteTransaction = () => {
+const deleteTransaction = async () => {
   financeStore.deleteTransaction(selectedTransaction.value.id)
   closeDeleteDialog()
 }
 
-const saveTransaction = (transaction) => {
+const saveTransaction = async (transaction) => {
   if (isEditMode.value && selectedTransaction.value) {
     financeStore.updateTransaction(selectedTransaction.value.id, transaction)
   } else {
@@ -148,18 +150,13 @@ const resetFilters = () => {
   search.value = ''
 }
 
-const applyFilters = () => {
-  // In a real app, this might trigger an API call with the filters
-  // For now, we're just using the computed filteredTransactions
-}
-
 onMounted(() => {
   financeStore.init()
 })
 </script>
 
 <template>
-  <DashboardLayout pageTitle="Transactions" activeItem="transactions">
+  <DashboardLayout pageTitle="Transactions" activeItem="transaction">
     <v-row>
       <v-col cols="12">
         <v-row align="center" class="mb-6">
@@ -176,6 +173,16 @@ onMounted(() => {
       </v-col>
     </v-row>
 
+    <v-alert
+      v-if="!financeStore.accounts.length && !financeStore.isLoading"
+      type="info"
+      class="mb-4"
+      >Add your first account on the Dashboard before recording transactions.<v-btn
+        to="/dashboard"
+        variant="text"
+        >Add account</v-btn
+      ></v-alert
+    >
     <!-- Transaction Filters -->
     <v-row>
       <v-col cols="12">
@@ -234,50 +241,30 @@ onMounted(() => {
             </v-row>
             <v-row class="mt-4">
               <v-col cols="12" sm="6" md="3">
-                <v-menu v-model="dateMenu.start" :close-on-content-click="false" location="bottom">
-                  <template v-slot:activator="{ props }">
-                    <v-text-field
-                      v-model="filters.startDate"
-                      label="Start Date"
-                      prepend-inner-icon="mdi-calendar"
-                      readonly
-                      v-bind="props"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details
-                    ></v-text-field>
-                  </template>
-                  <v-date-picker
-                    v-model="filters.startDate"
-                    @update:model-value="dateMenu.start = false"
-                  ></v-date-picker>
-                </v-menu>
+                <v-text-field
+                  v-model="filters.startDate"
+                  type="date"
+                  label="Start date"
+                  clearable
+                  hide-details
+                  variant="outlined"
+                />
               </v-col>
               <v-col cols="12" sm="6" md="3">
-                <v-menu v-model="dateMenu.end" :close-on-content-click="false" location="bottom">
-                  <template v-slot:activator="{ props }">
-                    <v-text-field
-                      v-model="filters.endDate"
-                      label="End Date"
-                      prepend-inner-icon="mdi-calendar"
-                      readonly
-                      v-bind="props"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details
-                    ></v-text-field>
-                  </template>
-                  <v-date-picker
-                    v-model="filters.endDate"
-                    @update:model-value="dateMenu.end = false"
-                  ></v-date-picker>
-                </v-menu>
+                <v-text-field
+                  v-model="filters.endDate"
+                  type="date"
+                  label="End date"
+                  clearable
+                  hide-details
+                  variant="outlined"
+                />
               </v-col>
               <v-col cols="12" md="6" class="d-flex justify-end align-center">
                 <v-btn variant="text" color="primary" class="mr-2" @click="resetFilters">
                   Reset Filters
                 </v-btn>
-                <v-btn color="primary" @click="applyFilters"> Apply Filters </v-btn>
+                <span class="text-caption">Filters apply automatically</span>
               </v-col>
             </v-row>
           </v-card-text>
@@ -294,32 +281,54 @@ onMounted(() => {
             :headers="headers"
             :items="filteredTransactions"
             :items-per-page="10"
+            :sort-by="[{ key: 'date', order: 'desc' }]"
             :loading="loading"
             class="elevation-0"
           >
-            <template v-slot:item.date="{ item }">
+            <template v-slot:[`item.date`]="{ item }">
               {{ formatDate(item.date) }}
             </template>
-            <template v-slot:item.amount="{ item }">
+            <template v-slot:[`item.amount`]="{ item }">
               <span :class="item.type === 'expense' ? 'text-error' : 'text-success'">
-                {{ item.type === 'expense' ? '-' : '+' }}{{ formatCurrency(item.amount) }}
+                {{ item.type === 'transfer' ? '↔ ' : item.type === 'expense' ? '-' : '+'
+                }}{{ formatCurrency(item.amount) }}
               </span>
             </template>
-            <template v-slot:item.category="{ item }">
+            <template v-slot:[`item.account`]="{ item }">
+              {{ financeStore.accountName(item.account) }}
+              <span v-if="item.type === 'transfer'">
+                → {{ financeStore.accountName(item.toAccount) }}</span
+              >
+            </template>
+            <template v-slot:[`item.category`]="{ item }">
               <v-chip
                 :color="getCategoryColor(item.category)"
                 size="small"
                 variant="tonal"
                 class="text-caption"
               >
-                {{ item.category }}
+                {{
+                  item.type === 'transfer' ? 'Transfer' : financeStore.categoryName(item.category)
+                }}
               </v-chip>
             </template>
-            <template v-slot:item.actions="{ item }">
-              <v-btn icon variant="text" size="small" @click="openEditTransactionDialog(item)">
+            <template v-slot:[`item.actions`]="{ item }">
+              <v-btn
+                icon
+                variant="text"
+                size="small"
+                :aria-label="`Edit ${item.description}`"
+                @click="openEditTransactionDialog(item)"
+              >
                 <v-icon>mdi-pencil</v-icon>
               </v-btn>
-              <v-btn icon variant="text" size="small" @click="openDeleteTransactionDialog(item)">
+              <v-btn
+                icon
+                variant="text"
+                size="small"
+                :aria-label="`Delete ${item.description}`"
+                @click="openDeleteTransactionDialog(item)"
+              >
                 <v-icon>mdi-delete</v-icon>
               </v-btn>
             </template>
@@ -354,7 +363,10 @@ onMounted(() => {
     <v-dialog v-model="deleteDialog" max-width="500px">
       <v-card>
         <v-card-title>Delete Transaction</v-card-title>
-        <v-card-text>
+        <v-card-text
+          ><v-alert v-if="financeStore.error" type="error" class="mb-3">{{
+            financeStore.error
+          }}</v-alert>
           Are you sure you want to delete this transaction? This action cannot be undone.
         </v-card-text>
         <v-card-actions>

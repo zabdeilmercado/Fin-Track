@@ -1,6 +1,8 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { TRANSACTION_TYPES, CATEGORY_OPTIONS } from '@/utils/constants'
+import { today } from '@/utils/financeMath'
+import { ref, reactive, watch, computed } from 'vue'
+import { TRANSACTION_TYPES } from '@/utils/constants'
+import { useFinanceStore } from '@/stores/finance'
 import { getCategoryColor, getCategoryIcon } from '@/utils/formatters'
 
 const props = defineProps({
@@ -10,7 +12,7 @@ const props = defineProps({
       description: '',
       amount: 0,
       type: 'expense',
-      date: new Date().toISOString().substr(0, 10),
+      date: today(),
       category: '',
       account: '',
       notes: '',
@@ -26,26 +28,37 @@ const emit = defineEmits(['submit', 'cancel'])
 
 const form = ref(null)
 const valid = ref(false)
-const dateMenu = ref(false)
+const financeStore = useFinanceStore()
 const transactionTypes = TRANSACTION_TYPES
-const categoryOptions = CATEGORY_OPTIONS
+const categoryOptions = computed(() =>
+  financeStore.categories.map((c) => ({ title: c.name, value: c.id })),
+)
 
-const formData = reactive({ ...props.transaction })
+const formData = reactive({
+  account: '',
+})
 
-const submitForm = () => {
-  if (!valid.value) return
+const submitForm = async () => {
+  if (!(await form.value.validate()).valid) return
   emit('submit', { ...formData })
 }
 
-onMounted(() => {
-  // Initialize form with provided transaction data
-  Object.assign(formData, props.transaction)
-})
+watch(
+  () => props.transaction,
+  () => {
+    // Initialize form with provided transaction data
+    Object.assign(formData, { toAccount: '' }, props.transaction)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <v-form ref="form" v-model="valid" @submit.prevent="submitForm">
     <v-container>
+      <v-alert v-if="financeStore.error" type="error" class="mb-4">{{
+        financeStore.error
+      }}</v-alert>
       <v-row>
         <v-col cols="12" sm="6">
           <v-text-field
@@ -59,7 +72,8 @@ onMounted(() => {
           <v-text-field
             v-model.number="formData.amount"
             label="Amount"
-            prefix="$"
+            prefix="₱"
+            step="0.01"
             type="number"
             :rules="[
               (v) => !!v || 'Amount is required',
@@ -78,26 +92,17 @@ onMounted(() => {
           ></v-select>
         </v-col>
         <v-col cols="12" sm="6">
-          <v-menu v-model="dateMenu" :close-on-content-click="false" location="bottom">
-            <template v-slot:activator="{ props }">
-              <v-text-field
-                v-model="formData.date"
-                label="Date"
-                prepend-inner-icon="mdi-calendar"
-                readonly
-                v-bind="props"
-                :rules="[(v) => !!v || 'Date is required']"
-                required
-              ></v-text-field>
-            </template>
-            <v-date-picker
-              v-model="formData.date"
-              @update:model-value="dateMenu = false"
-            ></v-date-picker>
-          </v-menu>
+          <v-text-field
+            v-model="formData.date"
+            type="date"
+            label="Date"
+            :rules="[(v) => !!v || 'Date is required']"
+            required
+          />
         </v-col>
         <v-col cols="12" sm="6">
           <v-select
+            v-if="formData.type !== 'transfer'"
             v-model="formData.category"
             :items="categoryOptions"
             label="Category"
@@ -120,10 +125,21 @@ onMounted(() => {
           <v-select
             v-model="formData.account"
             :items="accountOptions"
-            label="Account"
+            :label="formData.type === 'transfer' ? 'From account' : 'Account'"
             required
             :rules="[(v) => !!v || 'Account is required']"
           ></v-select>
+        </v-col>
+        <v-col v-if="formData.type === 'transfer'" cols="12">
+          <v-select
+            v-model="formData.toAccount"
+            :items="accountOptions.filter((a) => a.value !== formData.account)"
+            label="To account"
+            :rules="[(v) => !!v || 'Choose a destination account']"
+          />
+          <p class="text-caption">
+            Transfers move money between your accounts without counting as income or expenses.
+          </p>
         </v-col>
         <v-col cols="12">
           <v-textarea v-model="formData.notes" label="Notes" rows="2"></v-textarea>
@@ -133,8 +149,15 @@ onMounted(() => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="error" variant="text" @click="$emit('cancel')">Cancel</v-btn>
-      <v-btn color="primary" variant="text" type="submit" :disabled="!valid"> Save </v-btn>
+      <v-btn
+        color="primary"
+        variant="text"
+        type="submit"
+        :disabled="!valid || financeStore.isLoading || financeStore.isSaving"
+        :loading="financeStore.isSaving"
+      >
+        Save
+      </v-btn>
     </v-card-actions>
   </v-form>
 </template>
-

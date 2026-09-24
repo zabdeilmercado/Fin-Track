@@ -1,5 +1,6 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { useFinanceStore } from '@/stores/finance'
+import { ref, reactive, watch } from 'vue'
 import { ACCOUNT_TYPE_OPTIONS } from '@/utils/constants'
 import { getAccountIcon } from '@/utils/formatters'
 
@@ -8,7 +9,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       name: '',
-      type: 'checking',
+      type: 'savings',
       balance: 0,
       notes: '',
     }),
@@ -17,6 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel'])
 
+const financeStore = useFinanceStore()
 const form = ref(null)
 const valid = ref(false)
 const accountTypeOptions = ACCOUNT_TYPE_OPTIONS
@@ -28,15 +30,22 @@ const submitForm = () => {
   emit('submit', { ...formData })
 }
 
-onMounted(() => {
-  // Initialize form with provided account data
-  Object.assign(formData, props.account)
-})
+watch(
+  () => props.account,
+  () => {
+    // Initialize form with provided account data
+    Object.assign(formData, props.account)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <v-form ref="form" v-model="valid" @submit.prevent="submitForm">
     <v-container>
+      <v-alert v-if="financeStore.error" type="error" class="mb-4">{{
+        financeStore.error
+      }}</v-alert>
       <v-row>
         <v-col cols="12">
           <v-text-field
@@ -67,10 +76,15 @@ onMounted(() => {
         <v-col cols="12">
           <v-text-field
             v-model.number="formData.balance"
-            label="Initial Balance"
-            prefix="$"
+            label="Balance"
+            prefix="₱"
+            step="0.01"
             type="number"
-            :rules="[(v) => v !== null || 'Balance is required']"
+            :rules="[
+              (v) =>
+                (v !== '' && v !== null && Number.isFinite(Number(v))) ||
+                'A valid balance is required',
+            ]"
             required
           ></v-text-field>
         </v-col>
@@ -82,8 +96,15 @@ onMounted(() => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="error" variant="text" @click="$emit('cancel')">Cancel</v-btn>
-      <v-btn color="primary" variant="text" type="submit" :disabled="!valid"> Save </v-btn>
+      <v-btn
+        color="primary"
+        variant="text"
+        type="submit"
+        :disabled="!valid || financeStore.isLoading || financeStore.isSaving"
+        :loading="financeStore.isSaving"
+      >
+        Save
+      </v-btn>
     </v-card-actions>
   </v-form>
 </template>
-
