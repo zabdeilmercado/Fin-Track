@@ -5,9 +5,12 @@ import { createServer } from 'vite'
 // Exercise the actual Pinia store against a deterministic database boundary.
 test('financial persistence, balances, failures, and concurrent edits', async () => {
   const server = await createServer({
+    mode: 'test',
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://test.supabase.co'),
-      'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify('test-public-key'),
+      'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(
+        'sb_publishable_test_only_1234567890',
+      ),
     },
     server: { middlewareMode: true },
   })
@@ -61,6 +64,16 @@ test('financial persistence, balances, failures, and concurrent edits', async ()
     )
     const id = store.accounts[0].id
     assert.ok(id)
+    assert.equal(
+      await store.addAccount({ name: 'x'.repeat(81), type: 'cash', balance: 0 }),
+      false,
+      'stored text is length-limited',
+    )
+    assert.equal(
+      await store.addCategory({ name: 'Unsafe', icon: 'mdi-script-text', color: 'not-a-color' }),
+      false,
+      'category display values are allow-listed',
+    )
     const expense = {
       id: null,
       description: 'Lunch',

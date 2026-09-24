@@ -6,6 +6,8 @@ import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { supabase } from '@/utils/supabase'
 import { useFinanceStore } from '@/stores/finance'
+import { authErrorMessage } from '@/utils/errors'
+import { reportError } from '@/utils/logger'
 
 const financeStore = useFinanceStore()
 const router = useRouter()
@@ -34,7 +36,8 @@ const menuItems = [
 const logout = async () => {
   const { error } = await supabase.auth.signOut()
   if (error) {
-    logoutError.value = error.message
+    reportError('Sign out', error)
+    logoutError.value = authErrorMessage(error, 'Could not sign out. Please try again.')
     return
   }
   financeStore.reset()

@@ -38,12 +38,18 @@ Transactions must be completed entries dated today or earlier. Changing the disp
 npm run lint:check
 npm test
 npm run build
+npm run audit:prod
 npm run preview
 ```
 
 The store tests use a mocked database boundary. They cover persistence, save failures, optimistic concurrency, transfers, credit repayment, goals, and budget math. They make no requests to your real Supabase project.
 
-For an isolated browser test, run `node scripts/browser-fixture.mjs` and open `http://127.0.0.1:5175`. Sign in with `tester@example.com` / `TestOnly!123`. This separate local fixture stores temporary test data in memory and is never imported into production. It does not verify live Supabase authentication, email delivery, or row-level security.
+For an isolated browser test, set temporary `FINTRACK_FIXTURE_EMAIL` and
+`FINTRACK_FIXTURE_PASSWORD` environment variables, run
+`node scripts/browser-fixture.mjs`, and open `http://127.0.0.1:5175`.
+The fixture stores temporary data in memory and is never imported into
+production. It does not verify live Supabase authentication, email delivery,
+row-level security, or server-side rate limiting.
 
 ## Hosting and data
 
@@ -51,4 +57,4 @@ Vercel configuration uses `dist` and SPA route rewrites. HTTPS is required for i
 
 Each user owns one versioned `finance_state` document guarded by Supabase row-level security. Writes only appear locally after database success. Conflicting edits require a reload before retrying; records are not silently overwritten. Use Settings → Sync now to fetch changes from another device. New budget/goal collections are initialized for older documents.
 
-This document model suits personal use. A substantially larger or multi-user shared accounting product should use normalized tables and database transactions. Prototype mock services remain unused by the application.
+This document model suits personal use. A substantially larger or multi-user shared accounting product should use normalized tables and database transactions.

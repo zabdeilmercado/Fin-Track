@@ -4,6 +4,8 @@ import { supabase } from '@/utils/supabase'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { requiredValidator, emailValidator } from '@/utils/validators'
+import { authErrorMessage, UserFacingError } from '@/utils/errors'
+import { reportError } from '@/utils/logger'
 
 const router = useRouter()
 const route = useRoute()
@@ -31,7 +33,7 @@ const handleSubmit = async () => {
   errorMessage.value = ''
   try {
     if (!supabase)
-      throw new Error('Supabase is not configured. Set the deployment environment variables.')
+      throw new UserFacingError('FinTrack is not configured for sign-in.')
     const { error } = await supabase.auth.signInWithPassword({
       email: email.value.trim(),
       password: password.value,
@@ -40,7 +42,8 @@ const handleSubmit = async () => {
     password.value = ''
     await router.replace('/dashboard')
   } catch (err) {
-    errorMessage.value = err.message
+    reportError('Sign in', err)
+    errorMessage.value = authErrorMessage(err, 'Sign-in failed. Please try again.')
   } finally {
     loading.value = false
   }
@@ -55,14 +58,15 @@ const resetPassword = async () => {
   errorMessage.value = ''
   notice.value = ''
   try {
-    if (!supabase) throw new Error('Supabase is not configured.')
+    if (!supabase) throw new UserFacingError('FinTrack is not configured for password recovery.')
     const { error } = await supabase.auth.resetPasswordForEmail(email.value.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
     })
     if (error) throw error
     notice.value = 'If this email has an account, you will receive a password-reset link.'
   } catch (err) {
-    errorMessage.value = err.message
+    reportError('Password reset request', err)
+    errorMessage.value = authErrorMessage(err, 'Could not request a password reset. Try again.')
   } finally {
     loading.value = false
   }
@@ -85,6 +89,7 @@ const resetPassword = async () => {
           v-model="email"
           label="Email"
           type="email"
+          maxlength="254"
           variant="outlined"
           required
           prepend-inner-icon="mdi-email-outline"
@@ -94,6 +99,7 @@ const resetPassword = async () => {
         <v-text-field
           v-model="password"
           label="Password"
+          maxlength="128"
           :type="showPassword ? 'text' : 'password'"
           variant="outlined"
           required

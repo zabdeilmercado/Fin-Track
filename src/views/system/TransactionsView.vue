@@ -126,15 +126,14 @@ const closeDeleteDialog = () => {
 }
 
 const deleteTransaction = async () => {
-  financeStore.deleteTransaction(selectedTransaction.value.id)
-  closeDeleteDialog()
+  if (await financeStore.deleteTransaction(selectedTransaction.value.id)) closeDeleteDialog()
 }
 
 const saveTransaction = async (transaction) => {
   if (isEditMode.value && selectedTransaction.value) {
-    financeStore.updateTransaction(selectedTransaction.value.id, transaction)
+    if (!(await financeStore.updateTransaction(selectedTransaction.value.id, transaction))) return
   } else {
-    financeStore.addTransaction(transaction)
+    if (!(await financeStore.addTransaction(transaction))) return
   }
   closeTransactionDialog()
 }

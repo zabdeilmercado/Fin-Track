@@ -8,11 +8,25 @@ create table if not exists public.finance_state (
     payload ?& array['accounts', 'transactions', 'categories'] and
     jsonb_typeof(payload->'accounts') = 'array' and
     jsonb_typeof(payload->'transactions') = 'array' and
-    jsonb_typeof(payload->'categories') = 'array'
-  )
+    jsonb_typeof(payload->'categories') = 'array' and
+    (not payload ? 'budgets' or jsonb_typeof(payload->'budgets') = 'array') and
+    (not payload ? 'goals' or jsonb_typeof(payload->'goals') = 'array')
+  ),
+  constraint payload_size check (pg_column_size(payload) <= 1048576)
 );
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.finance_state'::regclass and conname = 'payload_size'
+  ) then
+    alter table public.finance_state
+      add constraint payload_size check (pg_column_size(payload) <= 1048576);
+  end if;
+end
+$$;
 alter table public.finance_state enable row level security;
-revoke all on public.finance_state from anon;
+revoke all on public.finance_state from public, anon;
 grant select, insert, update, delete on public.finance_state to authenticated;
 drop policy if exists "Read own finances" on public.finance_state;
 create policy "Read own finances" on public.finance_state for select to authenticated using ((select auth.uid()) = user_id);
@@ -25,4 +39,3 @@ create policy "Delete own finances" on public.finance_state for delete to authen
 
 
 commit;
-

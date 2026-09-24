@@ -61,15 +61,14 @@ const closeDeleteCategoryDialog = () => {
 }
 
 const deleteCategory = async () => {
-  financeStore.deleteCategory(selectedCategory.value.id)
-  closeDeleteCategoryDialog()
+  if (await financeStore.deleteCategory(selectedCategory.value.id)) closeDeleteCategoryDialog()
 }
 
 const saveCategory = async (category) => {
   if (isEditMode.value && selectedCategory.value) {
-    financeStore.updateCategory(selectedCategory.value.id, category)
+    if (!(await financeStore.updateCategory(selectedCategory.value.id, category))) return
   } else {
-    financeStore.addCategory(category)
+    if (!(await financeStore.addCategory(category))) return
   }
   closeCategoryDialog()
 }
@@ -192,7 +191,7 @@ onMounted(() => {
           </p>
         </div>
         <v-spacer></v-spacer>
-        <v-btn color="warning" variant="text" class="mt-3 mt-sm-0" to="/transactions">
+        <v-btn color="warning" variant="text" class="mt-3 mt-sm-0" to="/transaction">
           Review Transactions
         </v-btn>
       </div>

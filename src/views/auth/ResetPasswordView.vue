@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { supabase } from '@/utils/supabase'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { passwordValidator } from '@/utils/validators'
+import { authErrorMessage } from '@/utils/errors'
+import { reportError } from '@/utils/logger'
 const router = useRouter()
 const form = ref(null)
 const password = ref('')
@@ -28,7 +30,8 @@ const save = async () => {
     await supabase.auth.signOut()
     await router.replace({ name: 'login', query: { reset: 'success' } })
   } catch (err) {
-    error.value = err.message
+    reportError('Password update', err)
+    error.value = authErrorMessage(err, 'Could not update your password. Request a new link.')
   } finally {
     loading.value = false
   }
@@ -48,12 +51,14 @@ const save = async () => {
         ><v-text-field
           v-model="password"
           type="password"
+          maxlength="128"
           autocomplete="new-password"
           label="New password"
           :disabled="!available"
           :rules="[passwordValidator]" /><v-text-field
           v-model="confirmation"
           type="password"
+          maxlength="128"
           autocomplete="new-password"
           label="Confirm new password"
           :disabled="!available"

@@ -12,6 +12,7 @@ import App from './App.vue'
 import router from './router'
 import { supabase } from './utils/supabase'
 import { useFinanceStore } from './stores/finance'
+import { reportError } from './utils/logger'
 
 // Create Vuetify instance
 const vuetify = createVuetify({
@@ -76,11 +77,13 @@ const app = createApp(App)
 // Add Pinia store
 const pinia = createPinia()
 app.use(pinia)
+const navigate = (location) =>
+  router.replace(location).catch((error) => reportError('Auth navigation', error))
 supabase?.auth.onAuthStateChange((event) => {
-  if (event === 'PASSWORD_RECOVERY') void router.replace('/reset-password')
+  if (event === 'PASSWORD_RECOVERY') void navigate('/reset-password')
   if (event === 'SIGNED_OUT') {
     useFinanceStore(pinia).reset()
-    void router.replace('/login')
+    void navigate('/login')
   }
 })
 

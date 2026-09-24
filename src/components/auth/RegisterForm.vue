@@ -9,10 +9,8 @@ import {
 import AlertNotification from '@/components/common/AlertNotification.vue'
 import { useRegister } from '@/composables/auth/register'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 
 const { formData, formAction, refVForm, onFormSubmit } = useRegister()
-const router = useRouter()
 
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
@@ -25,12 +23,6 @@ const rules = {
 
 const passwordMatchRule = (value) => confirmedValidator(value, formData.value.password)
 
-const handleFormSubmit = async () => {
-  const success = await onFormSubmit()
-  if (success) {
-    router.push('/dashboard') // Redirect to the dashboard on success
-  }
-}
 </script>
 
 <template>
@@ -39,10 +31,10 @@ const handleFormSubmit = async () => {
     subtitle="Enter your information to get started"
     buttonText="Create account"
     :loading="formAction.formProcess"
-    @submit="handleFormSubmit"
+    @submit="onFormSubmit"
   >
     <template #form-fields>
-      <v-form ref="refVForm" @submit.prevent="handleFormSubmit">
+      <v-form ref="refVForm" @submit.prevent="onFormSubmit">
         <AlertNotification
           :formSuccessMessage="formAction.formSuccessMessage"
           :formErrorMessage="formAction.formErrorMessage"
@@ -52,6 +44,7 @@ const handleFormSubmit = async () => {
           v-model="formData.name"
           label="Full Name"
           placeholder="John Doe"
+          maxlength="80"
           variant="outlined"
           required
           prepend-inner-icon="mdi-account-outline"
@@ -63,6 +56,7 @@ const handleFormSubmit = async () => {
           label="Email"
           type="email"
           placeholder="name@example.com"
+          maxlength="254"
           variant="outlined"
           required
           prepend-inner-icon="mdi-email-outline"
@@ -72,6 +66,7 @@ const handleFormSubmit = async () => {
         <v-text-field
           v-model="formData.password"
           label="Password"
+          maxlength="128"
           :type="showPassword ? 'text' : 'password'"
           variant="outlined"
           required
@@ -84,6 +79,7 @@ const handleFormSubmit = async () => {
         <v-text-field
           v-model="formData.password_confirmation"
           label="Confirm Password"
+          maxlength="128"
           :type="showConfirmPassword ? 'text' : 'password'"
           variant="outlined"
           required

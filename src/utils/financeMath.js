@@ -1,3 +1,5 @@
+import { UserFacingError } from './errors.js'
+
 export const roundMoney = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100
 export const today = () => {
   const date = new Date()
@@ -20,7 +22,7 @@ export function money(value, allowZero = false, allowNegative = false) {
     (!allowNegative && number < 0) ||
     (!allowZero && roundMoney(number) === 0)
   ) {
-    throw new Error('Enter a valid amount' + (allowZero ? '.' : ' greater than zero.'))
+    throw new UserFacingError('Enter a valid amount' + (allowZero ? '.' : ' greater than zero.'))
   }
   return roundMoney(number)
 }

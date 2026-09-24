@@ -54,12 +54,20 @@ watch(
           <v-text-field
             v-model="formData.name"
             label="Category Name"
+            maxlength="60"
+            counter
             :rules="[(v) => !!v || 'Name is required']"
             required
           ></v-text-field>
         </v-col>
         <v-col cols="12">
-          <v-textarea v-model="formData.description" label="Description" rows="2"></v-textarea>
+          <v-textarea
+            v-model="formData.description"
+            label="Description"
+            rows="2"
+            maxlength="240"
+            counter
+          ></v-textarea>
         </v-col>
         <v-col cols="12" sm="6">
           <v-select

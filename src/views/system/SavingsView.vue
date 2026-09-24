@@ -126,6 +126,8 @@ onMounted(() => store.init())
               v-model="draft.name"
               label="Goal name"
               placeholder="Emergency fund"
+              maxlength="80"
+              counter
               :rules="[(v) => !!v?.trim() || 'Name your goal']"
             />
             <v-select
@@ -182,4 +184,3 @@ onMounted(() => store.init())
     >
   </DashboardLayout>
 </template>
-

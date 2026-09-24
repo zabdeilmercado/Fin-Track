@@ -1,6 +1,7 @@
 # Logs
 logs
 *.log
+*.stackdump
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -13,6 +14,19 @@ dist
 dist-ssr
 coverage
 *.local
+.env
+.env.*
+!.env.example
+.vercel
+.supabase
+supabase/.temp
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.pem
+*.key
+*.p12
 
 /cypress/videos/
 /cypress/screenshots/
@@ -28,8 +42,3 @@ coverage
 *.sw?
 
 *.tsbuildinfo
-
-.env
-.vercel
-.env*
-!.env.example

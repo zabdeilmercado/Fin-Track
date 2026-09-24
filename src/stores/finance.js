@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/utils/supabase'
-import { CATEGORY_OPTIONS } from '@/utils/constants'
+import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_OPTIONS } from '@/utils/constants'
+import { financeErrorMessage, UserFacingError } from '@/utils/errors'
+import { reportError } from '@/utils/logger'
 import {
   today,
   validDate,
@@ -26,6 +28,38 @@ const emptyState = () => ({
   })),
 })
 const round = (n) => Math.round((n + Number.EPSILON) * 100) / 100
+const text = (value, maxLength, label, required = false) => {
+  const cleaned = [...String(value ?? '')]
+    .filter((character) => {
+      const code = character.charCodeAt(0)
+      return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127)
+    })
+    .join('')
+    .trim()
+  if (required && !cleaned) throw new UserFacingError(`${label} is required.`)
+  if (cleaned.length > maxLength)
+    throw new UserFacingError(`${label} must be ${maxLength} characters or fewer.`)
+  return cleaned
+}
+const allowedIcon = new Set(CATEGORY_ICONS.map((item) => item.value))
+const allowedColor = new Set(CATEGORY_COLORS.map((item) => item.value))
+const collectionLimits = { accounts: 100, transactions: 10000, categories: 250, budgets: 1200, goals: 100 }
+const normalizePayload = (payload) => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload))
+    throw new Error('Invalid finance payload')
+  const clean = emptyState()
+  for (const [key, limit] of Object.entries(collectionLimits)) {
+    if (payload[key] === undefined) continue
+    if (
+      !Array.isArray(payload[key]) ||
+      payload[key].length > limit ||
+      payload[key].some((record) => !record || typeof record !== 'object' || Array.isArray(record))
+    )
+      throw new Error('Invalid finance payload')
+    clean[key] = payload[key]
+  }
+  return clean
+}
 
 export const useFinanceStore = defineStore('finance', () => {
   const state = ref(emptyState())
@@ -85,11 +119,6 @@ export const useFinanceStore = defineStore('finance', () => {
   const recentTransactions = computed(() =>
     [...transactions.value].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
   )
-  const topCategory = computed(
-    () =>
-      [...categories.value].filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount)[0] ||
-      null,
-  )
   const uncategorized = computed(() =>
     transactions.value.filter((t) => t.category === 'uncategorized'),
   )
@@ -116,10 +145,10 @@ export const useFinanceStore = defineStore('finance', () => {
     isLoading.value = true
     error.value = ''
     try {
-      if (!supabase) throw new Error('Supabase is not configured.')
+      if (!supabase) throw new UserFacingError('FinTrack is not configured for cloud sync.')
       const { data: auth, error: authError } = await supabase.auth.getUser()
       if (authError) throw authError
-      if (!auth.user) throw new Error('Please sign in again.')
+      if (!auth.user) throw new UserFacingError('Please sign in again.')
       if (userId.value === auth.user.id && !force) return
       if (userId.value !== auth.user.id) reset()
       const requestGeneration = generation
@@ -130,14 +159,13 @@ export const useFinanceStore = defineStore('finance', () => {
         .maybeSingle()
       if (loadError) throw loadError
       if (requestGeneration !== generation) return
-      state.value = { ...emptyState(), ...data?.payload }
+      state.value = data?.payload ? normalizePayload(data.payload) : emptyState()
       lastSynced.value = new Date().toISOString()
       version.value = data?.version ?? null
       userId.value = auth.user.id
     } catch (err) {
-      error.value = err.message?.includes('finance_state')
-        ? 'Your database needs setup. Run supabase/schema.sql in your Supabase SQL editor, then reload data.'
-        : err.message
+      reportError('Finance data load', err)
+      error.value = financeErrorMessage(err)
     } finally {
       isLoading.value = false
     }
@@ -148,7 +176,8 @@ export const useFinanceStore = defineStore('finance', () => {
     isSaving.value = true
     error.value = ''
     try {
-      if (!userId.value) throw new Error('Load your data successfully before making changes.')
+      if (!userId.value)
+        throw new UserFacingError('Load your data successfully before making changes.')
       const requestGeneration = generation
       const next = JSON.parse(JSON.stringify(state.value))
       mutate(next)
@@ -165,16 +194,17 @@ export const useFinanceStore = defineStore('finance', () => {
       const { data, error: saveError } = await query.select('version').maybeSingle()
       if (saveError) throw saveError
       if (!data)
-        throw new Error('Your data changed in another session. Reload your data and try again.')
+        throw new UserFacingError(
+          'Your data changed in another session. Reload your data and try again.',
+        )
       if (requestGeneration !== generation) return false
       state.value = next
       lastSynced.value = new Date().toISOString()
       version.value = data.version
       return true
     } catch (err) {
-      error.value = err.message?.includes('finance_state')
-        ? 'Your database needs setup. Run supabase/schema.sql in your Supabase SQL editor, then reload data.'
-        : err.message
+      reportError('Finance data save', err)
+      error.value = financeErrorMessage(err)
       return false
     } finally {
       isSaving.value = false
@@ -183,54 +213,62 @@ export const useFinanceStore = defineStore('finance', () => {
 
   function accountRecord(a, id) {
     if (!a.name?.trim() || !['checking', 'savings', 'cash', 'credit'].includes(a.type))
-      throw new Error('Enter an account name and a valid balance.')
-    return { ...a, id, name: a.name.trim(), balance: money(a.balance, true, true) }
+      throw new UserFacingError('Enter an account name and a valid balance.')
+    return {
+      id,
+      name: text(a.name, 80, 'Account name', true),
+      type: a.type,
+      balance: money(a.balance, true, true),
+      notes: text(a.notes, 500, 'Notes'),
+    }
   }
   function transactionRecord(t, id, next) {
     if (!t.description?.trim() || !Number.isFinite(Number(t.amount)) || Number(t.amount) <= 0)
-      throw new Error('Enter a description and a positive amount.')
+      throw new UserFacingError('Enter a description and a positive amount.')
     if (
       !['income', 'expense', 'transfer'].includes(t.type) ||
       !validDate(t.date) ||
       t.date > today()
     )
-      throw new Error('Enter a valid date, today or earlier, and a transaction type.')
+      throw new UserFacingError('Enter a valid date, today or earlier, and a transaction type.')
     if (!next.accounts.some((a) => a.id === t.account))
-      throw new Error('Add an account on the Dashboard first.')
+      throw new UserFacingError('Add an account on the Dashboard first.')
     if (
       t.type === 'transfer' &&
       (t.account === t.toAccount || !next.accounts.some((a) => a.id === t.toAccount))
     )
-      throw new Error('Choose a different destination account.')
+      throw new UserFacingError('Choose a different destination account.')
     if (t.type !== 'transfer' && !next.categories.some((c) => c.id === t.category))
-      throw new Error('Select an existing category.')
+      throw new UserFacingError('Select an existing category.')
     return {
-      ...t,
       id,
-      description: t.description.trim(),
+      description: text(t.description, 120, 'Description', true),
       amount: money(t.amount),
+      type: t.type,
+      date: t.date,
+      account: t.account,
       category: t.type === 'transfer' ? '' : t.category,
       toAccount: t.type === 'transfer' ? t.toAccount : '',
-      notes: t.notes || '',
+      notes: text(t.notes, 500, 'Notes'),
     }
   }
   const addAccount = (a) => change((s) => s.accounts.push(accountRecord(a, crypto.randomUUID())))
   const updateAccount = (id, a) =>
     change((s) => {
       const existing = s.accounts.find((x) => x.id === id)
-      if (!existing) throw new Error('Account no longer exists.')
+      if (!existing) throw new UserFacingError('Account no longer exists.')
       money(a.balance, true, true)
       if (a.type !== 'savings' && s.goals.some((g) => g.account === id))
-        throw new Error('Remove this account’s savings goal before changing its type.')
+        throw new UserFacingError('Remove this account’s savings goal before changing its type.')
       const adjustment = s.transactions.reduce((sum, t) => sum + accountEffect(t, { ...a, id }), 0)
       Object.assign(existing, accountRecord({ ...a, balance: Number(a.balance) - adjustment }, id))
     })
   const deleteAccount = (id) =>
     change((s) => {
       if (s.transactions.some((t) => t.account === id || t.toAccount === id))
-        throw new Error('Move or delete this account’s transactions before deleting it.')
+        throw new UserFacingError('Move or delete this account’s transactions before deleting it.')
       if (s.goals.some((g) => g.account === id))
-        throw new Error('Remove this account’s savings goal first.')
+        throw new UserFacingError('Remove this account’s savings goal first.')
       s.accounts = s.accounts.filter((a) => a.id !== id)
     })
   const addTransaction = (t) =>
@@ -245,20 +283,35 @@ export const useFinanceStore = defineStore('finance', () => {
     })
   const addCategory = (c) =>
     change((s) => {
-      if (!c.name?.trim()) throw new Error('Category name is required.')
-      s.categories.push({ ...c, name: c.name.trim(), id: crypto.randomUUID() })
+      if (!allowedIcon.has(c.icon) || !allowedColor.has(c.color))
+        throw new UserFacingError('Choose a valid category icon and color.')
+      s.categories.push({
+        id: crypto.randomUUID(),
+        name: text(c.name, 60, 'Category name', true),
+        description: text(c.description, 240, 'Description'),
+        icon: c.icon,
+        color: c.color,
+      })
     })
   const updateCategory = (id, c) =>
     change((s) => {
-      if (!c.name?.trim()) throw new Error('Category name is required.')
-      s.categories = s.categories.map((x) => (x.id === id ? { ...c, id, name: c.name.trim() } : x))
+      if (!allowedIcon.has(c.icon) || !allowedColor.has(c.color))
+        throw new UserFacingError('Choose a valid category icon and color.')
+      const record = {
+        id,
+        name: text(c.name, 60, 'Category name', true),
+        description: text(c.description, 240, 'Description'),
+        icon: c.icon,
+        color: c.color,
+      }
+      s.categories = s.categories.map((x) => (x.id === id ? record : x))
     })
   const deleteCategory = (id) =>
     change((s) => {
       if (s.transactions.some((t) => t.category === id))
-        throw new Error('Reassign this category’s transactions before deleting it.')
+        throw new UserFacingError('Reassign this category’s transactions before deleting it.')
       if (s.budgets.some((b) => b.category === id))
-        throw new Error('Remove budgets for this category first.')
+        throw new UserFacingError('Remove budgets for this category first.')
       s.categories = s.categories.filter((c) => c.id !== id)
     })
   const monthly = computed(() => monthSummary(transactions.value, selectedMonth.value))
@@ -305,9 +358,9 @@ export const useFinanceStore = defineStore('finance', () => {
   )
   const saveBudget = (b) =>
     change((s) => {
-      if (!validMonth(b.month)) throw new Error('Choose a valid month.')
+      if (!validMonth(b.month)) throw new UserFacingError('Choose a valid month.')
       if (b.category && !s.categories.some((c) => c.id === b.category))
-        throw new Error('Choose an existing category.')
+        throw new UserFacingError('Choose an existing category.')
       const existing = s.budgets.find(
         (x) => x.month === b.month && (x.category || '') === (b.category || ''),
       )
@@ -326,17 +379,18 @@ export const useFinanceStore = defineStore('finance', () => {
     })
   const saveGoal = (g) =>
     change((s) => {
-      if (!g.name?.trim()) throw new Error('Give your goal a name.')
+      if (!g.name?.trim()) throw new UserFacingError('Give your goal a name.')
       if (!s.accounts.some((a) => a.id === g.account && a.type === 'savings'))
-        throw new Error('Choose a savings account for this goal.')
+        throw new UserFacingError('Choose a savings account for this goal.')
       if (s.goals.some((x) => x.account === g.account && x.id !== g.id))
-        throw new Error(
+        throw new UserFacingError(
           'This account already has a goal. Use a separate savings account to avoid counting the same money twice.',
         )
-      if (g.deadline && !validDate(g.deadline)) throw new Error('Enter a valid target date.')
+      if (g.deadline && !validDate(g.deadline))
+        throw new UserFacingError('Enter a valid target date.')
       const record = {
         id: g.id || crypto.randomUUID(),
-        name: g.name.trim(),
+        name: text(g.name, 80, 'Goal name', true),
         account: g.account,
         target: money(g.target),
         deadline: g.deadline || '',
@@ -386,7 +440,6 @@ export const useFinanceStore = defineStore('finance', () => {
     totalExpenses,
     savingsRate,
     recentTransactions,
-    topCategory,
     uncategorizedAmount,
     uncategorizedCount,
     accountName,

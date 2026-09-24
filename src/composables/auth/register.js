@@ -1,6 +1,8 @@
 import { supabase, formActionDefault } from '@/utils/supabase'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { authErrorMessage } from '@/utils/errors'
+import { reportError } from '@/utils/logger'
 
 export function useRegister() {
   const router = useRouter()
@@ -35,33 +37,37 @@ export function useRegister() {
         options: {
           data: {
             name: formData.value.name,
-            is_admin: false,
           },
         },
       })
 
       if (error) {
-        formAction.value.formErrorMessage = error.message
+        formAction.value.formErrorMessage = authErrorMessage(error, 'Account creation failed. Try again.')
         formAction.value.formStatus = error.status
+        return false
       } else if (data) {
         formAction.value.formSuccessMessage = data.session
           ? 'Account created.'
           : 'Check your email to confirm your account, then sign in.'
         if (data.session) await router.replace('/dashboard')
         refVForm.value?.reset()
+        return true
       }
     } catch (err) {
-      console.error('[Unhandled Error in onSubmit]:', err)
-      formAction.value.formErrorMessage = err.message || 'Unexpected error occurred.'
+      reportError('Registration', err)
+      formAction.value.formErrorMessage = authErrorMessage(
+        err,
+        'Account creation failed. Try again.',
+      )
+      return false
     } finally {
       formAction.value.formProcess = false
     }
   }
 
-  const onFormSubmit = () => {
-    refVForm.value?.validate().then(({ valid }) => {
-      if (valid) onSubmit()
-    })
+  const onFormSubmit = async () => {
+    const result = await refVForm.value?.validate()
+    return result?.valid ? onSubmit() : false
   }
 
   return { formData, formAction, refVForm, onFormSubmit }

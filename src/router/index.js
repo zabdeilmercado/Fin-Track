@@ -5,6 +5,7 @@ import DashboardView from '@/views/system/DashboardView.vue'
 import TransactionView from '@/views/system/TransactionsView.vue'
 import CategoriesView from '@/views/system/CategoriesView.vue'
 import { supabase } from '@/utils/supabase'
+import { reportError } from '@/utils/logger'
 
 const routes = [
   {
@@ -60,9 +61,14 @@ router.beforeEach(async (to) => {
   if (to.name === 'reset-password') return true
   const isPublic = ['login', 'register'].includes(to.name)
   if (!supabase) return isPublic ? true : { name: 'login' }
-  const { data, error } = await supabase.auth.getSession()
-  if ((!data.session || error) && !isPublic) return { name: 'login' }
-  if (data.session && isPublic) return { name: 'dashboard' }
+  try {
+    const { data, error } = await supabase.auth.getSession()
+    if ((!data.session || error) && !isPublic) return { name: 'login' }
+    if (data.session && isPublic) return { name: 'dashboard' }
+  } catch (error) {
+    reportError('Session check', error)
+    return isPublic ? true : { name: 'login' }
+  }
 })
 
 export default router
